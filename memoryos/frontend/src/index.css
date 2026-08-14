@@ -1,0 +1,335 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* ============================================================
+   MemoryOS Design System — "Synaptic Recall"
+   Source of truth: Design.md
+   ============================================================ */
+
+@theme {
+  /* --- Color Palette (Design.md §2) --- */
+  --color-ink: #0E1524;
+  --color-surface: #161F33;
+  --color-surface-raised: #1E2A45;
+  --color-text-primary: #E7ECF6;
+  --color-text-muted: #8B96AC;
+  --color-recall: #4FD1C5;
+  --color-stale: #E8A33D;
+  --color-conflict: #E8617B;
+  --color-healthy: #4ADE80;
+
+  /* Light mode overrides */
+  --color-ink-light: #F7F8FB;
+  --color-surface-light: #FFFFFF;
+  --color-text-primary-light: #0E1524;
+  --color-text-muted-light: #5B6478;
+
+  /* --- Typography (Design.md §3) --- */
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+/* --- Base Styles --- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-ink);
+  color: var(--color-text-primary);
+  min-height: 100vh;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
+code, pre, .mono {
+  font-family: var(--font-mono);
+}
+
+/* --- Type Scale (Design.md §3) --- */
+.text-display-xl { font-size: 40px; line-height: 48px; font-weight: 600; font-family: var(--font-display); }
+.text-display-l  { font-size: 28px; line-height: 36px; font-weight: 600; font-family: var(--font-display); }
+.text-heading     { font-size: 20px; line-height: 28px; font-weight: 600; font-family: var(--font-display); }
+.text-body        { font-size: 15px; line-height: 24px; font-weight: 400; font-family: var(--font-body); }
+.text-body-small  { font-size: 13px; line-height: 20px; font-weight: 400; font-family: var(--font-body); }
+.text-caption     { font-size: 12px; line-height: 16px; font-weight: 500; font-family: var(--font-body); text-transform: uppercase; letter-spacing: 0.04em; }
+.text-code        { font-size: 13px; line-height: 20px; font-weight: 400; font-family: var(--font-mono); }
+
+/* --- The Pulse (Design.md §4) — Signature Element --- */
+.pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.pulse--recall {
+  background-color: var(--color-recall);
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.pulse--stale {
+  background-color: var(--color-stale);
+}
+
+.pulse--conflict {
+  background-color: var(--color-conflict);
+}
+
+.pulse--healthy {
+  background-color: var(--color-healthy);
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(79, 209, 197, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(79, 209, 197, 0); }
+}
+
+/* --- Accessibility (Design.md §5) --- */
+@media (prefers-reduced-motion: reduce) {
+  .pulse--recall {
+    animation: none;
+  }
+  .card-hover,
+  .btn-primary,
+  .input-field {
+    transition: none !important;
+  }
+}
+
+/* Focus rings using --recall at 2px (Design.md §5) */
+:focus-visible {
+  outline: 2px solid var(--color-recall);
+  outline-offset: 2px;
+}
+
+/* --- Reusable Components --- */
+
+/* Cards — glassmorphism with border accent */
+.card {
+  background: var(--color-surface);
+  border: 1px solid rgba(79, 209, 197, 0.08);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.card-hover:hover {
+  background: var(--color-surface-raised);
+  border-color: rgba(79, 209, 197, 0.2);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(79, 209, 197, 0.1);
+  transform: translateY(-1px);
+}
+
+/* Primary button */
+.btn-primary {
+  background: var(--color-recall);
+  color: var(--color-ink);
+  font-weight: 600;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: var(--font-body);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #5ee0d4;
+  box-shadow: 0 0 20px rgba(79, 209, 197, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Ghost button */
+.btn-ghost {
+  background: transparent;
+  color: var(--color-text-muted);
+  border: 1px solid rgba(139, 150, 172, 0.2);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: var(--font-body);
+}
+
+.btn-ghost:hover {
+  color: var(--color-text-primary);
+  border-color: rgba(139, 150, 172, 0.4);
+  background: rgba(30, 42, 69, 0.5);
+}
+
+/* Input fields */
+.input-field {
+  background: var(--color-surface-raised);
+  color: var(--color-text-primary);
+  border: 1px solid rgba(139, 150, 172, 0.15);
+  border-radius: 10px;
+  font-family: var(--font-body);
+  transition: all 0.2s ease;
+}
+
+.input-field:focus {
+  border-color: var(--color-recall);
+  box-shadow: 0 0 0 3px rgba(79, 209, 197, 0.1);
+  outline: none;
+}
+
+.input-field::placeholder {
+  color: var(--color-text-muted);
+  opacity: 0.6;
+}
+
+/* Stat badge */
+.stat-card {
+  background: rgba(30, 42, 69, 0.6);
+  border: 1px solid rgba(79, 209, 197, 0.06);
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+
+/* Tech tag */
+.tech-tag {
+  background: rgba(79, 209, 197, 0.08);
+  color: var(--color-recall);
+  border: 1px solid rgba(79, 209, 197, 0.15);
+  border-radius: 6px;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+/* Chat bubbles */
+.chat-bubble {
+  border-radius: 16px;
+  padding: 12px 16px;
+  max-width: 80%;
+  line-height: 1.6;
+}
+
+.chat-bubble--user {
+  background: linear-gradient(135deg, var(--color-recall), #3abfb3);
+  color: var(--color-ink);
+  border-bottom-right-radius: 4px;
+  margin-left: auto;
+}
+
+.chat-bubble--assistant {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  border: 1px solid rgba(79, 209, 197, 0.06);
+  border-bottom-left-radius: 4px;
+}
+
+/* Loading spinner */
+.loading-dots {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.loading-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-recall);
+  animation: dot-bounce 1.4s ease-in-out infinite both;
+}
+
+.loading-dots span:nth-child(2) { animation-delay: 0.16s; }
+.loading-dots span:nth-child(3) { animation-delay: 0.32s; }
+
+@keyframes dot-bounce {
+  0%, 80%, 100% { transform: scale(0); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* Background gradient glow */
+.bg-glow {
+  position: relative;
+}
+
+.bg-glow::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(79, 209, 197, 0.03) 0%,
+    transparent 60%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Divider */
+.divider {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(79, 209, 197, 0.15),
+    transparent
+  );
+}
+
+/* --- Scrollbar Styling --- */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-ink);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-surface-raised);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+/* --- Utility Animations --- */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.4s ease-out;
+}
