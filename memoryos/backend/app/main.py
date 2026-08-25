@@ -45,12 +45,22 @@ def create_app() -> FastAPI:
         redoc_url="/redoc" if settings.app_debug else None,
     )
 
-    # CORS middleware
+    # CORS middleware — use regex to allow all Vercel deployments + localhost
+    import os
     origins = settings.cors_origins_list
+    # Always include the known production Vercel URL
+    production_origins = [
+        "http://localhost:5173",
+        "https://memory-os-gamma.vercel.app",
+    ]
+    for o in production_origins:
+        if o not in origins:
+            origins.append(o)
     logger.info("cors_origins_configured", origins=origins)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
+        allow_origin_regex=r"https://.*\.vercel\.app",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
