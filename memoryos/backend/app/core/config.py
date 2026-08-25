@@ -44,13 +44,18 @@ class Settings(BaseSettings):
 
     # --- CORS ---
     cors_origins: str = Field(
-        default="http://localhost:5173", alias="CORS_ORIGINS"
+        default="http://localhost:5173",
+        alias="CORS_ORIGINS",
+        validation_alias="CORS_ORIGINS",
     )
 
     @property
     def cors_origins_list(self) -> list[str]:
         """Parse comma-separated CORS origins into a list."""
-        return [origin.strip() for origin in self.cors_origins.split(",")]
+        import os
+        # Fallback: read directly from env if pydantic didn't pick it up
+        raw = os.environ.get("CORS_ORIGINS", self.cors_origins)
+        return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
     # --- Embedding Config ---
     embedding_model: str = "models/gemini-embedding-001"
