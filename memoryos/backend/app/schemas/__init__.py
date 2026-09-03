@@ -56,6 +56,18 @@ class UserResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class UserUpdate(BaseModel):
+    """Partial update for user profile."""
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    email: Optional[EmailStr] = None
+
+
+class ChangePassword(BaseModel):
+    """Change password request."""
+    current_password: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+
 # ===========================
 # Project Schemas
 # ===========================

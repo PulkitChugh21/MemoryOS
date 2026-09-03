@@ -1,5 +1,6 @@
 /**
  * MemoryOS Frontend — Chat Store (Zustand)
+ * Handles chat messaging with retry logic for Railway cold starts.
  */
 
 import { create } from 'zustand';
@@ -26,6 +27,31 @@ interface ChatState {
   loadSession: (messages: ChatMessage[]) => void;
 }
 
+/** Retry wrapper: tries up to maxRetries times with exponential backoff */
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries = 2,
+  baseDelayMs = 2000
+): Promise<T> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      const isRetryable =
+        !err.response || // network error
+        err.response?.status >= 500 || // server error
+        err.code === 'ECONNABORTED'; // timeout
+
+      if (attempt < maxRetries && isRetryable) {
+        await new Promise((r) => setTimeout(r, baseDelayMs * (attempt + 1)));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error('Max retries exceeded');
+}
+
 export const useChatStore = create<ChatState>((set, get) => ({
   messages: [],
   sessionId: null,
@@ -47,10 +73,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }));
 
     try {
-      const { data } = await chatApi.send(projectId, {
-        message,
-        session_id: get().sessionId || undefined,
-      });
+      const { data } = await withRetry(() =>
+        chatApi.send(projectId, {
+          message,
+          session_id: get().sessionId || undefined,
+        })
+      );
 
       const assistantMsg: ChatMessage = {
         id: crypto.randomUUID(),
@@ -66,7 +94,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
         isLoading: false,
       }));
     } catch (err: any) {
-      const errorMsg = err.response?.data?.detail?.error?.message || 'Failed to send message';
+      const errorMsg =
+        err.response?.data?.detail?.error?.message ||
+        'Failed to send message. Please try again.';
       set({ error: errorMsg, isLoading: false });
     }
   },
@@ -147,7 +177,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
       set({ isLoading: false });
     } catch (err: any) {
-      set({ error: 'Streaming failed', isLoading: false });
+      set({ error: 'Streaming failed. Please try again.', isLoading: false });
     }
   },
 

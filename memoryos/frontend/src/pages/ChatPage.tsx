@@ -1,11 +1,13 @@
 /**
  * MemoryOS — Chat Page
- * Explicit inline styles for proper containment. No Tailwind class conflicts.
+ * Premium design with markdown rendering, animated backgrounds, and memory stats.
  */
 
 import { useState, useEffect, useRef } from 'react';
 import type { FormEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useChatStore } from '../store/chatStore';
 import { useAuthStore } from '../store/authStore';
 import { projectsApi, memoryApi } from '../api/client';
@@ -25,7 +27,7 @@ export default function ChatPage() {
   const [stats, setStats] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { messages, isLoading, error, sendMessage, clearChat } = useChatStore();
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -61,65 +63,32 @@ export default function ChatPage() {
       {/* Top Bar */}
       <header
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '12px 20px',
-          borderBottom: '1px solid rgba(79, 209, 197, 0.08)',
-          flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '12px 24px', borderBottom: '1px solid rgba(79, 209, 197, 0.06)',
+          flexShrink: 0, backdropFilter: 'blur(12px)', background: 'rgba(10, 15, 28, 0.85)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
           <button
             onClick={() => navigate('/projects')}
-            style={{
-              padding: '6px 12px',
-              fontSize: '13px',
-              color: 'var(--color-text-muted)',
-              background: 'transparent',
-              border: '1px solid rgba(139, 150, 172, 0.2)',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              flexShrink: 0,
-            }}
+            className="btn-ghost"
+            style={{ padding: '8px 14px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
           >
-            ← Projects
+            <span style={{ fontSize: '16px' }}>←</span> Projects
           </button>
-          <div style={{ width: '1px', height: '20px', background: 'rgba(79, 209, 197, 0.1)', flexShrink: 0 }}></div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-            <div className="pulse pulse--recall" style={{ flexShrink: 0 }}></div>
-            <span
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: '18px',
-                lineHeight: '24px',
-                fontWeight: 600,
-                color: 'var(--color-text-primary)',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
+          <div style={{ width: '1px', height: '24px', background: 'rgba(79, 209, 197, 0.08)', flexShrink: 0 }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+            <div className="pulse pulse--recall" style={{ flexShrink: 0 }} />
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 600, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {project?.name || 'Loading...'}
             </span>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+          <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'linear-gradient(135deg, var(--color-recall), var(--color-purple))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '12px', color: 'var(--color-ink)' }}>
+            {user?.name?.charAt(0).toUpperCase() || '?'}
+          </div>
           <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>{user?.name}</span>
-          <button
-            onClick={logout}
-            style={{
-              padding: '6px 14px',
-              fontSize: '13px',
-              color: 'var(--color-text-muted)',
-              background: 'transparent',
-              border: '1px solid rgba(139, 150, 172, 0.2)',
-              borderRadius: '8px',
-              cursor: 'pointer',
-            }}
-          >
-            Sign Out
-          </button>
         </div>
       </header>
 
@@ -128,47 +97,53 @@ export default function ChatPage() {
         {/* Chat Area */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
           {/* Messages */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '24px 20px' }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '28px 24px' }}>
             {messages.length === 0 ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                <div style={{ textAlign: 'center', maxWidth: '480px', padding: '0 16px' }}>
-                  <div className="pulse pulse--recall" style={{ width: '24px', height: '24px', margin: '0 auto 20px' }}></div>
-                  <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '28px', lineHeight: '36px', fontWeight: 600, color: 'var(--color-text-primary)', margin: '0 0 12px 0' }}>
+                <div style={{ textAlign: 'center', maxWidth: '500px', padding: '0 16px' }}>
+                  <div style={{ fontSize: '48px', marginBottom: '20px' }}>🧠</div>
+                  <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '28px', fontWeight: 700, color: 'var(--color-text-primary)', margin: '0 0 12px' }}>
                     Start a Conversation
                   </h2>
-                  <p style={{ fontSize: '15px', lineHeight: '24px', color: 'var(--color-text-muted)', margin: '0 0 20px 0' }}>
+                  <p style={{ fontSize: '15px', lineHeight: '24px', color: 'var(--color-text-muted)', margin: '0 0 24px' }}>
                     Ask anything about your project. MemoryOS will remember everything across sessions — no need to re-explain.
                   </p>
                   {project?.tech_stack && project.tech_stack.length > 0 && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
                       {project.tech_stack.map((tech) => (
-                        <span key={tech} style={{ background: 'rgba(79, 209, 197, 0.08)', color: 'var(--color-recall)', border: '1px solid rgba(79, 209, 197, 0.15)', borderRadius: '6px', padding: '2px 10px', fontSize: '12px', fontWeight: 500 }}>
-                          {tech}
-                        </span>
+                        <span key={tech} className="tech-tag">{tech}</span>
                       ))}
                     </div>
                   )}
                 </div>
               </div>
             ) : (
-              <div style={{ maxWidth: '720px', margin: '0 auto' }}>
-                {messages.map((msg) => (
+              <div style={{ maxWidth: '760px', margin: '0 auto' }}>
+                {messages.map((msg, i) => (
                   <div
                     key={msg.id}
                     style={{
                       display: 'flex',
                       justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                      marginBottom: '16px',
+                      marginBottom: '18px',
+                      animation: `slide-up 0.3s ease-out ${i * 0.02}s both`,
                     }}
                   >
+                    {/* Assistant avatar */}
+                    {msg.role === 'assistant' && (
+                      <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'var(--color-surface)', border: '1px solid rgba(79, 209, 197, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0, marginRight: '10px', marginTop: '2px' }}>
+                        🧠
+                      </div>
+                    )}
+
                     <div
                       style={{
                         maxWidth: '80%',
-                        padding: '12px 16px',
-                        borderRadius: '16px',
+                        padding: msg.role === 'user' ? '12px 18px' : '16px 20px',
+                        borderRadius: '18px',
                         ...(msg.role === 'user'
                           ? {
-                              background: 'linear-gradient(135deg, var(--color-recall), #3abfb3)',
+                              background: 'linear-gradient(135deg, var(--color-recall), #38b2ac)',
                               color: 'var(--color-ink)',
                               borderBottomRightRadius: '4px',
                             }
@@ -180,15 +155,23 @@ export default function ChatPage() {
                             }),
                       }}
                     >
-                      <div style={{ fontSize: '15px', lineHeight: '24px', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                        {msg.content}
-                      </div>
+                      {msg.role === 'user' ? (
+                        <div style={{ fontSize: '15px', lineHeight: '24px', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                          {msg.content}
+                        </div>
+                      ) : (
+                        <div className="markdown-content">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {msg.content}
+                          </ReactMarkdown>
+                        </div>
+                      )}
 
                       {/* Memory sources */}
                       {msg.role === 'assistant' && msg.sourcesUsed !== undefined && msg.sourcesUsed > 0 && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(79, 209, 197, 0.08)' }}>
-                          <div className="pulse pulse--recall" style={{ width: '6px', height: '6px' }}></div>
-                          <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(79, 209, 197, 0.08)' }}>
+                          <div className="pulse pulse--recall" style={{ width: '6px', height: '6px' }} />
+                          <span style={{ fontSize: '12px', color: 'var(--color-text-muted)', fontWeight: 500 }}>
                             {msg.sourcesUsed} memory source{msg.sourcesUsed > 1 ? 's' : ''} recalled
                           </span>
                         </div>
@@ -196,11 +179,18 @@ export default function ChatPage() {
 
                       {/* Loading */}
                       {msg.isStreaming && (
-                        <div className="loading-dots" style={{ marginTop: '8px' }}>
-                          <span></span><span></span><span></span>
+                        <div className="loading-dots" style={{ marginTop: '10px' }}>
+                          <span /><span /><span />
                         </div>
                       )}
                     </div>
+
+                    {/* User avatar */}
+                    {msg.role === 'user' && (
+                      <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'linear-gradient(135deg, var(--color-recall), var(--color-purple))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '13px', color: 'var(--color-ink)', flexShrink: 0, marginLeft: '10px', marginTop: '2px' }}>
+                        {user?.name?.charAt(0).toUpperCase() || '?'}
+                      </div>
+                    )}
                   </div>
                 ))}
                 <div ref={messagesEndRef} />
@@ -210,14 +200,14 @@ export default function ChatPage() {
 
           {/* Error */}
           {error && (
-            <div style={{ margin: '0 20px 8px', padding: '12px 16px', borderRadius: '8px', fontSize: '13px', background: 'rgba(232, 97, 123, 0.08)', border: '1px solid rgba(232, 97, 123, 0.2)', color: 'var(--color-conflict)' }}>
-              {error}
+            <div style={{ margin: '0 24px 8px', padding: '12px 18px', borderRadius: '12px', fontSize: '13px', background: 'rgba(232, 97, 123, 0.06)', border: '1px solid rgba(232, 97, 123, 0.15)', color: 'var(--color-conflict)' }}>
+              ⚠️ {error}
             </div>
           )}
 
           {/* Input */}
-          <form onSubmit={handleSend} style={{ padding: '8px 20px 20px', flexShrink: 0 }}>
-            <div style={{ maxWidth: '720px', margin: '0 auto', display: 'flex', gap: '12px' }}>
+          <form onSubmit={handleSend} style={{ padding: '12px 24px 24px', flexShrink: 0 }}>
+            <div style={{ maxWidth: '760px', margin: '0 auto', display: 'flex', gap: '12px', background: 'var(--color-surface)', border: '1px solid rgba(79, 209, 197, 0.08)', borderRadius: '18px', padding: '6px 6px 6px 18px', alignItems: 'center' }}>
               <input
                 id="chat-input"
                 type="text"
@@ -227,18 +217,9 @@ export default function ChatPage() {
                 disabled={isLoading}
                 autoFocus
                 style={{
-                  flex: 1,
-                  padding: '12px 16px',
-                  borderRadius: '14px',
-                  fontSize: '15px',
-                  lineHeight: '24px',
-                  fontFamily: 'var(--font-body)',
-                  background: 'var(--color-surface)',
-                  color: 'var(--color-text-primary)',
-                  border: '1px solid rgba(139, 150, 172, 0.15)',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  minWidth: 0,
+                  flex: 1, padding: '10px 0', fontSize: '15px', fontFamily: 'var(--font-body)',
+                  background: 'transparent', color: 'var(--color-text-primary)',
+                  border: 'none', outline: 'none', minWidth: 0,
                 }}
               />
               <button
@@ -246,9 +227,11 @@ export default function ChatPage() {
                 type="submit"
                 disabled={isLoading || !input.trim()}
                 className="btn-primary"
-                style={{ padding: '12px 24px', fontSize: '15px', borderRadius: '14px', flexShrink: 0 }}
+                style={{ padding: '10px 22px', fontSize: '14px', borderRadius: '14px', flexShrink: 0, fontWeight: 600 }}
               >
-                {isLoading ? '...' : 'Send'}
+                {isLoading ? (
+                  <span className="loading-dots"><span /><span /><span /></span>
+                ) : 'Send'}
               </button>
             </div>
           </form>
@@ -257,65 +240,53 @@ export default function ChatPage() {
         {/* Right Sidebar — Memory Stats */}
         <aside
           style={{
-            width: '260px',
-            borderLeft: '1px solid rgba(79, 209, 197, 0.08)',
-            background: 'var(--color-surface)',
-            overflowY: 'auto',
-            padding: '20px',
-            flexShrink: 0,
+            width: '270px', borderLeft: '1px solid rgba(79, 209, 197, 0.06)',
+            background: 'rgba(17, 24, 39, 0.5)', backdropFilter: 'blur(12px)',
+            overflowY: 'auto', padding: '24px', flexShrink: 0,
           }}
         >
-          <h3 style={{ fontSize: '12px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--color-text-muted)', margin: '0 0 16px 0' }}>
+          <h3 style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-muted)', margin: '0 0 18px' }}>
             Memory Stats
           </h3>
 
           {stats ? (
             <div>
-              {/* Stat cards */}
               {[
-                { label: 'Episodes', value: stats.episodic?.total_episodes ?? 0 },
-                { label: 'Sessions', value: stats.episodic?.total_sessions ?? 0 },
-                { label: 'Vectors', value: stats.semantic?.points_count ?? 0 },
+                { label: 'Episodes', value: stats.episodic?.total_episodes ?? 0, icon: '📝' },
+                { label: 'Sessions', value: stats.episodic?.total_sessions ?? 0, icon: '🔗' },
+                { label: 'Vectors', value: stats.semantic?.points_count ?? 0, icon: '🧮' },
               ].map((s) => (
-                <div
-                  key={s.label}
-                  style={{
-                    background: 'rgba(30, 42, 69, 0.6)',
-                    border: '1px solid rgba(79, 209, 197, 0.06)',
-                    borderRadius: '10px',
-                    padding: '12px 16px',
-                    marginBottom: '10px',
-                  }}
-                >
-                  <div style={{ fontSize: '12px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--color-text-muted)', marginBottom: '4px' }}>
-                    {s.label}
-                  </div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: '24px', lineHeight: '32px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
-                    {s.value}
+                <div key={s.label} className="stat-card" style={{ marginBottom: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <div style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-text-muted)', marginBottom: '4px' }}>
+                        {s.icon} {s.label}
+                      </div>
+                      <div style={{ fontFamily: 'var(--font-display)', fontSize: '26px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                        {s.value}
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
 
-              {/* Divider */}
-              <div style={{ height: '1px', margin: '16px 0', background: 'linear-gradient(90deg, transparent, rgba(79, 209, 197, 0.15), transparent)' }}></div>
+              <div className="divider" style={{ margin: '18px 0' }} />
 
-              {/* Status */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div className="pulse pulse--healthy"></div>
-                <span style={{ fontSize: '13px', color: 'var(--color-healthy)' }}>Memory Active</span>
+                <div className="pulse pulse--healthy" />
+                <span style={{ fontSize: '13px', color: 'var(--color-healthy)', fontWeight: 500 }}>Memory Active</span>
               </div>
             </div>
           ) : (
-            <p style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>Loading...</p>
+            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+              <div className="loading-dots"><span /><span /><span /></div>
+            </div>
           )}
 
-          {/* Project Info */}
           {project?.description && (
-            <div style={{ marginTop: '24px' }}>
-              <div style={{ height: '1px', marginBottom: '16px', background: 'linear-gradient(90deg, transparent, rgba(79, 209, 197, 0.15), transparent)' }}></div>
-              <h3 style={{ fontSize: '12px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--color-text-muted)', margin: '0 0 8px 0' }}>
-                About
-              </h3>
+            <div style={{ marginTop: '28px' }}>
+              <div className="divider" style={{ marginBottom: '18px' }} />
+              <h3 style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-muted)', margin: '0 0 10px' }}>About</h3>
               <p style={{ fontSize: '13px', lineHeight: '20px', color: 'var(--color-text-primary)', margin: 0, wordBreak: 'break-word' }}>
                 {project.description}
               </p>
@@ -323,15 +294,11 @@ export default function ChatPage() {
           )}
 
           {project?.tech_stack && project.tech_stack.length > 0 && (
-            <div style={{ marginTop: '16px' }}>
-              <h3 style={{ fontSize: '12px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--color-text-muted)', margin: '0 0 8px 0' }}>
-                Stack
-              </h3>
+            <div style={{ marginTop: '18px' }}>
+              <h3 style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-muted)', margin: '0 0 10px' }}>Stack</h3>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                 {project.tech_stack.map((tech) => (
-                  <span key={tech} style={{ background: 'rgba(79, 209, 197, 0.08)', color: 'var(--color-recall)', border: '1px solid rgba(79, 209, 197, 0.15)', borderRadius: '6px', padding: '2px 10px', fontSize: '12px', fontWeight: 500 }}>
-                    {tech}
-                  </span>
+                  <span key={tech} className="tech-tag">{tech}</span>
                 ))}
               </div>
             </div>

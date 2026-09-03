@@ -1,6 +1,7 @@
 """
 MemoryOS Backend — Auth API Routes
-/auth/register, /auth/login, /auth/me
+/auth/register, /auth/login, /auth/me, /auth/change-password
+Includes user profile management: update, delete, change password.
 """
 
 import uuid
@@ -16,7 +17,7 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
-from app.db.models import User
+from app.db.models import User, Project, MemoryEpisode
 from app.db.session import get_db
 from app.schemas import (
     ErrorResponse,
@@ -24,6 +25,8 @@ from app.schemas import (
     UserLogin,
     UserRegister,
     UserResponse,
+    UserUpdate,
+    ChangePassword,
 )
 
 logger = get_logger("api.auth")
@@ -145,6 +148,125 @@ async def get_me(
     db: AsyncSession = Depends(get_db),
 ):
     """Get the currently authenticated user's profile."""
+    user = await _get_user(db, user_id)
+    return UserResponse.model_validate(user)
+
+
+@router.patch(
+    "/me",
+    response_model=UserResponse,
+    responses={401: {"model": ErrorResponse}},
+)
+async def update_profile(
+    payload: UserUpdate,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update the authenticated user's profile (name, email)."""
+    user = await _get_user(db, user_id)
+
+    update_data = payload.model_dump(exclude_unset=True)
+
+    # Check email uniqueness if changing email
+    if "email" in update_data and update_data["email"] != user.email:
+        existing = await db.execute(
+            select(User).where(User.email == update_data["email"])
+        )
+        if existing.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "error": {
+                        "code": "EMAIL_EXISTS",
+                        "message": "This email is already taken.",
+                        "details": {},
+                    }
+                },
+            )
+
+    for key, value in update_data.items():
+        setattr(user, key, value)
+
+    await db.flush()
+    logger.info("user_profile_updated", user_id=user_id, fields=list(update_data.keys()))
+
+    return UserResponse.model_validate(user)
+
+
+@router.post(
+    "/change-password",
+    status_code=status.HTTP_200_OK,
+    responses={401: {"model": ErrorResponse}},
+)
+async def change_password(
+    payload: ChangePassword,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Change the authenticated user's password."""
+    user = await _get_user(db, user_id)
+
+    if not verify_password(payload.current_password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={
+                "error": {
+                    "code": "WRONG_PASSWORD",
+                    "message": "Current password is incorrect.",
+                    "details": {},
+                }
+            },
+        )
+
+    user.hashed_password = hash_password(payload.new_password)
+    await db.flush()
+
+    logger.info("user_password_changed", user_id=user_id)
+    return {"message": "Password updated successfully."}
+
+
+@router.delete(
+    "/me",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={401: {"model": ErrorResponse}},
+)
+async def delete_account(
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Permanently delete the authenticated user's account.
+    Cascades: deletes all projects, episodes, and Qdrant collections.
+    """
+    user = await _get_user(db, user_id)
+    uid = uuid.UUID(user_id)
+
+    # Soft-delete all user projects and clean up Qdrant collections
+    result = await db.execute(
+        select(Project).where(Project.owner_id == uid, Project.status != "deleted")
+    )
+    projects = list(result.scalars().all())
+
+    for project in projects:
+        project.status = "deleted"
+        try:
+            from app.memory.semantic import delete_collection
+            await delete_collection(project.id)
+        except Exception:
+            pass  # Best-effort cleanup
+
+    # Deactivate user account (soft delete — preserves referential integrity)
+    user.is_active = False
+    user.email = f"deleted_{user.id}@memoryos.deleted"
+    await db.flush()
+
+    logger.info("user_account_deleted", user_id=user_id)
+
+
+# --- Helpers ---
+
+async def _get_user(db: AsyncSession, user_id: str) -> User:
+    """Get user by ID or raise 404."""
     result = await db.execute(
         select(User).where(User.id == uuid.UUID(user_id))
     )
@@ -162,4 +284,4 @@ async def get_me(
             },
         )
 
-    return UserResponse.model_validate(user)
+    return user

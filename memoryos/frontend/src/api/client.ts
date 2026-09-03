@@ -1,6 +1,7 @@
 /**
  * MemoryOS Frontend — API Client
  * Axios instance configured for the MemoryOS backend.
+ * Timeout set to 60s for Railway cold starts + Gemini API calls.
  */
 
 import axios from 'axios';
@@ -10,6 +11,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '/api/v1';
 const api = axios.create({
   baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
+  timeout: 60000, // 60s — Railway cold starts + Gemini can take 15-30s
 });
 
 // Attach JWT token to every request
@@ -40,6 +42,11 @@ export const authApi = {
   login: (data: { email: string; password: string }) =>
     api.post('/auth/login', data),
   me: () => api.get('/auth/me'),
+  updateProfile: (data: { name?: string; email?: string }) =>
+    api.patch('/auth/me', data),
+  changePassword: (data: { current_password: string; new_password: string }) =>
+    api.post('/auth/change-password', data),
+  deleteAccount: () => api.delete('/auth/me'),
 };
 
 // --- Projects API ---
