@@ -63,7 +63,7 @@ async def generate_response(
             response = await asyncio.to_thread(
                 model.generate_content,
                 prompt,
-                request_options={"timeout": 30},
+                request_options={"timeout": 60},
             )
             return response.text
 
@@ -128,7 +128,7 @@ async def generate_response_stream(
                 model.generate_content,
                 prompt,
                 stream=True,
-                request_options={"timeout": 30},
+                request_options={"timeout": 60},
             )
 
             for chunk in response:
