@@ -5,11 +5,14 @@ meaningful unit of work: what got finished, what's in progress right now,
 and what's next. Keep it honest — this is exactly the discipline MemoryOS
 itself is meant to enforce for its users, so it should not go stale.*
 
-**Last updated:** 2026-08-13
+**Last updated:** 2026-09-04
 
 ---
 
-## Current Status: 🔨 Phase 1 — Foundation: Local Testing Complete, Preparing for Deployment
+## Current Status: ✅ Phase 1 — Foundation: Deployed & Live
+
+**Frontend:** https://memory-os-gamma.vercel.app
+**Backend:** https://memoryos-production-cf09.up.railway.app
 
 ## ✅ Completed
 
@@ -32,77 +35,82 @@ itself is meant to enforce for its users, so it should not go stale.*
 - [x] **Phase 1 Backend — Fully Built & Tested:**
   - [x] Project folder structure matching Architecture.md §6
   - [x] `requirements.txt` with all Phase 1 dependencies
-  - [x] `core/config.py` — Pydantic Settings loading all env vars
+  - [x] `core/config.py` — Pydantic Settings with validation_alias + os.environ fallback for Railway
   - [x] `core/security.py` — JWT creation/verification + bcrypt password hashing
   - [x] `core/logging.py` — structlog JSON logging for Railway
   - [x] `.env.example` — all Phase 1 env vars documented
   - [x] `db/models.py` — SQLAlchemy models: User, Project, MemoryEpisode
   - [x] `db/session.py` — async session factory with pool_pre_ping, 5-min recycle
-  - [x] `schemas/__init__.py` — all Pydantic request/response models
+  - [x] `schemas/__init__.py` — all Pydantic request/response models + UserUpdate, ChangePassword
   - [x] `memory/episodic.py` — Tier 1 episodic memory CRUD
   - [x] `memory/semantic.py` — Qdrant vector store with auto-recreate on dimension mismatch
   - [x] `memory/retrieval.py` — semantic retrieval with relevance*0.6+recency*0.4 re-ranking
-  - [x] `llm/gemini_client.py` — Gemini API wrapper with retry+backoff + fast-fail on quota
+  - [x] `llm/gemini_client.py` — Gemini API wrapper with retry+backoff + fast-fail on quota (60s timeout)
   - [x] `llm/embeddings.py` — Gemini gemini-embedding-001 (3072-dim) wrapper
-  - [x] `llm/prompt_builder.py` — Master System Prompt + context assembly
-  - [x] `api/auth.py` — /auth/register, /auth/login, /auth/me
-  - [x] `api/projects.py` — full CRUD with user isolation
+  - [x] `llm/prompt_builder.py` — Master System Prompt with concise response rules + context assembly
+  - [x] `api/auth.py` — /auth/register, /auth/login, /auth/me, PATCH /me, POST /change-password, DELETE /me
+  - [x] `api/projects.py` — full CRUD (create, list, get, update, delete) with user isolation
   - [x] `api/chat.py` — core chat loop with short-lived DB sessions + SSE streaming
   - [x] `api/memory.py` — episodes, sessions, stats read endpoints
-  - [x] `api/health.py` — health check for Railway monitoring
-  - [x] `main.py` — FastAPI app with CORS, lifecycle, global error handler
+  - [x] `api/health.py` — health check + /health/debug diagnostic endpoint
+  - [x] `main.py` — FastAPI app with CORS (hardcoded + regex), lifecycle, global error handler
   - [x] Alembic configured and initial migration applied to Supabase
-- [x] **Phase 1 Frontend — Fully Built:**
+- [x] **Phase 1 Frontend — Fully Built & Polished:**
   - [x] Vite + React 18 + TypeScript project initialized
-  - [x] Tailwind CSS v4 configured with Design.md tokens
-  - [x] Design system in `index.css` — colors, typography, The Pulse
-  - [x] `api/client.ts` — Axios client with JWT interceptors
+  - [x] Premium "Synaptic Recall v2" design system in `index.css`:
+    - Animated gradient backgrounds with floating orbs
+    - Grid pattern overlay for depth
+    - Glassmorphism cards with hover glow + top-line accent
+    - Premium buttons with shine effects
+    - Modal system (overlay + card + animations)
+    - Badges, stat cards, tech tags
+    - Markdown content styles for AI responses
+    - KaTeX CSS for math notation rendering
+  - [x] `api/client.ts` — Axios client with JWT interceptors, 60s timeout, user management methods
   - [x] `store/authStore.ts` — Zustand auth state management
-  - [x] `store/chatStore.ts` — Zustand chat state with streaming
-  - [x] `pages/LoginPage.tsx` — auth login page
-  - [x] `pages/RegisterPage.tsx` — auth registration page
-  - [x] `pages/ProjectsPage.tsx` — project list + create modal
-  - [x] `pages/ChatPage.tsx` — chat interface with memory stats sidebar
+  - [x] `store/chatStore.ts` — Zustand chat state with retry logic (2 retries, exponential backoff)
+  - [x] `pages/LoginPage.tsx` — split-screen layout with hero section + glassmorphism form
+  - [x] `pages/RegisterPage.tsx` — matching split-screen with feature highlights
+  - [x] `pages/ProjectsPage.tsx` — project grid with:
+    - Edit (✏️) and Delete (🗑️) buttons per card
+    - Rename modal, delete confirmation modal
+    - User profile dropdown (avatar + name → settings/logout)
+    - Profile settings modal (update name/email, change password, delete account)
+  - [x] `pages/ChatPage.tsx` — chat with:
+    - ReactMarkdown + remark-gfm + remark-math + rehype-katex
+    - User/assistant avatars
+    - Combined input bar (input + send button in one container)
+    - Glass sidebar with memory stats
   - [x] `App.tsx` — React Router v6 + protected routes
 - [x] **External Services Connected:**
-  - [x] Supabase PostgreSQL — tables created via Alembic migration
+  - [x] Supabase PostgreSQL — tables created via Alembic migration (using connection pooler URL)
   - [x] Qdrant Cloud — collection auto-created per project (3072-dim)
   - [x] Gemini API — gemini-3-flash-preview (LLM) + gemini-embedding-001 (embeddings)
-- [x] **End-to-End Verified Locally:**
-  - [x] Health check: 200, all services reporting connected
-  - [x] Auth login: 200, JWT token returned
-  - [x] Projects CRUD: 201/200, project created and listed
-  - [x] Chat (Gemini): 200, correct response ("Four" for "What is 2+2?")
-  - [x] Memory recall: 200, AI recalled previous message, 2 sources retrieved
-  - [x] Memory stats: 4 episodes, 4 vectors, 1 session
-  - [x] Frontend login, projects list, chat page all render and function
-- [x] **Frontend UI Polished:**
-  - [x] Fixed text overlapping / going outside containers on all pages
-  - [x] Rewrote all pages with explicit inline styles to eliminate Tailwind class conflicts
-  - [x] Login: proper label→input spacing, card containment, gradient divider
-  - [x] Projects: header padded from edges, card content fully contained, hover effects
-  - [x] Chat: header text truncation, sidebar word-break, input pinned to bottom
-  - [x] Added design system CSS: glassmorphism cards, btn-primary hover glow, loading dots
-- [x] **Test cleanup + deployment configs:**
-  - [x] Removed test_chat.py, test_db.py, test_e2e.py
-  - [x] Created Procfile + runtime.txt for Railway
-  - [x] Created railway.toml with healthcheck + restart policy
-  - [x] Created vercel.json with SPA rewrites for React Router
-  - [x] Created root .gitignore
-  - [x] Initialized git repo + initial commit (69 files, 8463 insertions)
+- [x] **Production Deployed & Working:**
+  - [x] Backend on Railway (Nixpacks builder, auto-deploy from GitHub)
+  - [x] Frontend on Vercel (auto-deploy from GitHub)
+  - [x] CORS fixed: hardcoded origins + allow_origin_regex for *.vercel.app
+  - [x] Database connection fixed: switched from direct Supabase URL to connection pooler
+  - [x] /health/debug diagnostic endpoint for troubleshooting
+  - [x] Auth (login/register) working on production
+  - [x] Chat working with concise responses and markdown rendering
+  - [x] Project CRUD (create, rename, delete) working
+  - [x] User management (update profile, change password, delete account) working
+  - [x] Git security audit: .gitignore hardened for .env.*, binary files, build artifacts
 
 ## 🔨 Currently Being Worked On
 
-- Push to GitHub + connect Railway and Vercel for deployment
+- Nothing — Phase 1 is complete and live ✅
 
 ## ⏭️ Next Up
 
-1. Create GitHub repo and push code
-2. Deploy backend to Railway (connect GitHub, set env vars)
-3. Deploy frontend to Vercel (connect GitHub, set VITE_API_URL)
-4. Update CORS_ORIGINS in Railway with Vercel production URL
-5. End-to-end test on live URLs
-6. Begin Phase 2 planning (file upload, structured memory, hybrid search)
+1. Begin Phase 2 planning and implementation (Multi-Modal Ingestion):
+   - File upload and ingestion pipeline
+   - Structured memory extraction (entities, facts, relationships)
+   - Hybrid search (BM25 + semantic retrieval)
+   - Memory timeline UI
+   - File versioning and diffing
+2. Later phases: Self-Healing Memory (Phase 3), Enterprise Scale (Phase 4), Ecosystem (Phase 5)
 
 ## 🧭 Decisions Log (append-only — don't edit past entries, add new ones)
 
@@ -122,6 +130,15 @@ itself is meant to enforce for its users, so it should not go stale.*
 | 2026-08-05 | Reduced SQLAlchemy pool_recycle from 3600s to 300s for Supabase free-tier compatibility |
 | 2026-08-11 | Rewrote all frontend pages with inline styles to fix Tailwind class spacing conflicts |
 | 2026-08-13 | Initialized git repo; created Railway (railway.toml) + Vercel (vercel.json) deployment configs |
+| 2026-08-25 | Deployed to Railway + Vercel. Fixed CORS with hardcoded origins + regex fallback |
+| 2026-08-26 | Switched Supabase connection from direct URL to connection pooler (DNS resolution fix on Railway) |
+| 2026-08-26 | Added /health/debug endpoint for production diagnostics |
+| 2026-09-03 | Full visual overhaul: animated backgrounds, glassmorphism, premium split-screen auth, card hover effects |
+| 2026-09-03 | Added user management: update profile, change password, delete account (backend + frontend) |
+| 2026-09-03 | Added project rename/delete UI with confirmation modals |
+| 2026-09-03 | Added ReactMarkdown + remark-math + rehype-katex for formatted AI responses |
+| 2026-09-03 | Chat retry logic: 2 retries with exponential backoff, 60s frontend + backend timeout |
+| 2026-09-03 | Updated system prompt for concise responses: 200-400 word max, no LaTeX $..$ syntax |
 
 ## 📝 How to Update This File
 
