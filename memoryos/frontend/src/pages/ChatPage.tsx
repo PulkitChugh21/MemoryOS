@@ -23,6 +23,73 @@ interface Project {
   project_type: string;
 }
 
+/** Cycling status messages shown while the AI is generating */
+const THINKING_PHRASES = [
+  { icon: '🔍', text: 'Searching memory...' },
+  { icon: '🧠', text: 'Recalling relevant context...' },
+  { icon: '⚡', text: 'Connecting the dots...' },
+  { icon: '✨', text: 'Crafting response...' },
+  { icon: '📡', text: 'Retrieving knowledge...' },
+  { icon: '🔗', text: 'Cross-referencing sessions...' },
+  { icon: '💭', text: 'Thinking deeply...' },
+  { icon: '🧬', text: 'Weaving memories together...' },
+];
+
+function ThinkingIndicator() {
+  const [phraseIndex, setPhraseIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPhraseIndex((prev) => (prev + 1) % THINKING_PHRASES.length);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, []);
+
+  const phrase = THINKING_PHRASES[phraseIndex];
+
+  return (
+    <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '18px', animation: 'slide-up 0.3s ease-out' }}>
+      {/* Avatar */}
+      <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'var(--color-surface)', border: '1px solid rgba(79, 209, 197, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0, marginRight: '10px', marginTop: '2px' }}>
+        🧠
+      </div>
+      {/* Bubble */}
+      <div
+        style={{
+          background: 'var(--color-surface)',
+          border: '1px solid rgba(79, 209, 197, 0.08)',
+          borderRadius: '18px',
+          borderBottomLeftRadius: '4px',
+          padding: '14px 20px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          minWidth: '220px',
+        }}
+      >
+        <div style={{
+          width: '8px', height: '8px', borderRadius: '50%',
+          background: 'var(--color-recall)',
+          animation: 'pulse-glow 1.5s ease-in-out infinite',
+          flexShrink: 0,
+        }} />
+        <span
+          key={phraseIndex}
+          style={{
+            fontSize: '14px',
+            color: 'var(--color-text-muted)',
+            fontWeight: 500,
+            fontStyle: 'italic',
+            animation: 'fade-in 0.4s ease-out',
+          }}
+        >
+          {phrase.icon} {phrase.text}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function ChatPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const [project, setProject] = useState<Project | null>(null);
@@ -40,7 +107,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, isLoading]);
 
   const loadProject = async () => {
     try { const { data } = await projectsApi.get(projectId!); setProject(data); }
@@ -196,6 +263,7 @@ export default function ChatPage() {
                     )}
                   </div>
                 ))}
+                {isLoading && <ThinkingIndicator />}
                 <div ref={messagesEndRef} />
               </div>
             )}
