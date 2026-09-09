@@ -5,7 +5,7 @@ meaningful unit of work: what got finished, what's in progress right now,
 and what's next. Keep it honest — this is exactly the discipline MemoryOS
 itself is meant to enforce for its users, so it should not go stale.*
 
-**Last updated:** 2026-09-04
+**Last updated:** 2026-09-09
 
 ---
 
@@ -78,6 +78,7 @@ itself is meant to enforce for its users, so it should not go stale.*
     - Profile settings modal (update name/email, change password, delete account)
   - [x] `pages/ChatPage.tsx` — chat with:
     - ReactMarkdown + remark-gfm + remark-math + rehype-katex
+    - Animated thinking indicator with cycling status messages while AI generates
     - User/assistant avatars
     - Combined input bar (input + send button in one container)
     - Glass sidebar with memory stats
@@ -139,6 +140,7 @@ itself is meant to enforce for its users, so it should not go stale.*
 | 2026-09-03 | Added ReactMarkdown + remark-math + rehype-katex for formatted AI responses |
 | 2026-09-03 | Chat retry logic: 2 retries with exponential backoff, 60s frontend + backend timeout |
 | 2026-09-03 | Updated system prompt for concise responses: 200-400 word max, no LaTeX $..$ syntax |
+| 2026-09-09 | Added animated thinking indicator with 8 cycling status phrases while AI generates |
 
 ## 📝 How to Update This File
 

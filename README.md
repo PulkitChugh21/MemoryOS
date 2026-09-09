@@ -39,6 +39,7 @@ Instead of starting every conversation from scratch, the assistant retrieves rel
 - 🎨 **Premium UI** — Glassmorphism, animated gradients, micro-animations
 - ✏️ **Project Management** — Create, rename, delete projects with confirmation modals
 - 📝 **Markdown Rendering** — Code blocks, headings, math notation (KaTeX) in AI responses
+- 💭 **Thinking Indicator** — Animated cycling status messages while AI generates (like GPT/Claude)
 - 👤 **User Management** — Update profile, change password, delete account
 - 🔐 **JWT Auth** — Secure registration, login, and session management
 - 🔒 **Project Isolation** — Each project has its own memory namespace
