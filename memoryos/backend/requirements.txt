@@ -1,4 +1,4 @@
-# MemoryOS Backend — Phase 1 Dependencies
+# MemoryOS Backend — Phase 1 + Phase 2 Dependencies
 # Approved stack only (see Rules.md §1)
 
 # --- Core Framework ---
@@ -39,8 +39,12 @@ httpx==0.28.1
 sse-starlette==2.3.6
 email-validator==2.3.0
 
-# --- Background Jobs (stub for Phase 1, full Celery in Phase 3) ---
+# --- Phase 2: BM25 Keyword Search ---
+rank-bm25==0.2.2
+
+# --- Phase 2: Supabase Storage (file upload) ---
+supabase==2.15.2
+
+# --- Background Jobs (stub for Phase 2, full Celery in Phase 3) ---
 # celery — deferred to Phase 3
 
-# --- BM25 (stub for Phase 1, full hybrid search in Phase 2) ---
-# rank-bm25 — deferred to Phase 2
