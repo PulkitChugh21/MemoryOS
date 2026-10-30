@@ -1,6 +1,7 @@
 /**
  * MemoryOS Frontend — App Root
  * React Router setup with auth-protected routes.
+ * Phase 2: Added Files and Timeline routes.
  */
 
 import { useEffect } from 'react';
@@ -11,6 +12,8 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProjectsPage from './pages/ProjectsPage';
 import ChatPage from './pages/ChatPage';
+import FilesPage from './pages/FilesPage';
+import TimelinePage from './pages/TimelinePage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -44,6 +47,8 @@ function AppRoutes() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
       <Route path="/chat/:projectId" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
+      <Route path="/files/:projectId" element={<ProtectedRoute><FilesPage /></ProtectedRoute>} />
+      <Route path="/timeline/:projectId" element={<ProtectedRoute><TimelinePage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/projects" replace />} />
     </Routes>
   );

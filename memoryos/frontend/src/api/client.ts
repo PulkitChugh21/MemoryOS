@@ -77,6 +77,38 @@ export const memoryApi = {
     api.get(`/memory/${projectId}/sessions/${sessionId}`),
   stats: (projectId: string) =>
     api.get(`/memory/${projectId}/stats`),
+  timeline: (projectId: string, params?: { limit?: number; event_type?: string }) =>
+    api.get(`/memory/${projectId}/timeline`, { params }),
+};
+
+// --- Facts API (Phase 2) ---
+export const factsApi = {
+  list: (projectId: string, params?: { fact_type?: string; include_stale?: boolean; limit?: number }) =>
+    api.get(`/memory/${projectId}/facts`, { params }),
+  get: (projectId: string, factId: string) =>
+    api.get(`/memory/${projectId}/facts/${factId}`),
+};
+
+// --- Files API (Phase 2) ---
+export const filesApi = {
+  upload: (projectId: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post(`/files/${projectId}/upload`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 120000, // 2 min for large files + embedding
+    });
+  },
+  list: (projectId: string) =>
+    api.get(`/files/${projectId}`),
+  get: (projectId: string, fileId: string) =>
+    api.get(`/files/${projectId}/${fileId}`),
+  download: (projectId: string, fileId: string) =>
+    api.get(`/files/${projectId}/${fileId}/download`, { responseType: 'blob' }),
+  delete: (projectId: string, fileId: string) =>
+    api.delete(`/files/${projectId}/${fileId}`),
+  versions: (projectId: string, fileId: string) =>
+    api.get(`/files/${projectId}/${fileId}/versions`),
 };
 
 export default api;

@@ -1,6 +1,7 @@
 /**
  * MemoryOS — Chat Page
  * Premium design with markdown rendering, animated backgrounds, and memory stats.
+ * Phase 2: File upload button, facts sidebar section, navigation to Files/Timeline.
  */
 
 import { useState, useEffect, useRef } from 'react';
@@ -13,7 +14,7 @@ import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import { useChatStore } from '../store/chatStore';
 import { useAuthStore } from '../store/authStore';
-import { projectsApi, memoryApi } from '../api/client';
+import { projectsApi, memoryApi, factsApi, filesApi } from '../api/client';
 
 interface Project {
   id: string;
@@ -21,6 +22,15 @@ interface Project {
   description: string;
   tech_stack: string[];
   project_type: string;
+}
+
+interface Fact {
+  id: string;
+  fact_type: string;
+  key: string;
+  value: string;
+  confidence: number;
+  is_stale: boolean;
 }
 
 /** Cycling status messages shown while the AI is generating */
@@ -34,6 +44,17 @@ const THINKING_PHRASES = [
   { icon: '💭', text: 'Thinking deeply...' },
   { icon: '🧬', text: 'Weaving memories together...' },
 ];
+
+const FACT_TYPE_ICONS: Record<string, string> = {
+  decision: '⚖️',
+  preference: '💡',
+  entity: '🏷️',
+  tech_stack: '🔧',
+  goal: '🎯',
+  milestone: '🏁',
+  open_question: '❓',
+  file_fact: '📄',
+};
 
 function ThinkingIndicator() {
   const [phraseIndex, setPhraseIndex] = useState(0);
@@ -95,13 +116,17 @@ export default function ChatPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [input, setInput] = useState('');
   const [stats, setStats] = useState<any>(null);
+  const [facts, setFacts] = useState<Fact[]>([]);
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { messages, isLoading, error, sendMessage, clearChat } = useChatStore();
   const { user } = useAuthStore();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (projectId) { loadProject(); loadStats(); }
+    if (projectId) { loadProject(); loadStats(); loadFacts(); }
     return () => clearChat();
   }, [projectId]);
 
@@ -119,6 +144,13 @@ export default function ChatPage() {
     catch { /* silent */ }
   };
 
+  const loadFacts = async () => {
+    try {
+      const { data } = await factsApi.list(projectId!, { limit: 20 });
+      setFacts(data.facts || []);
+    } catch { /* silent — facts may not exist yet */ }
+  };
+
   const handleSend = async (e: FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
@@ -126,6 +158,24 @@ export default function ChatPage() {
     setInput('');
     await sendMessage(projectId!, msg);
     loadStats();
+    loadFacts(); // Refresh facts after each message (extraction may have added new ones)
+  };
+
+  const handleFileUpload = async (file: File) => {
+    setIsUploadingFile(true);
+    setUploadStatus(`Uploading ${file.name}...`);
+    try {
+      const { data } = await filesApi.upload(projectId!, file);
+      setUploadStatus(`✅ ${file.name} — ${data.chunks_embedded} chunks, ${data.facts_extracted} facts`);
+      loadStats();
+      loadFacts();
+      setTimeout(() => setUploadStatus(''), 5000);
+    } catch (e: any) {
+      const msg = e.response?.data?.error?.message || 'Upload failed';
+      setUploadStatus(`❌ ${msg}`);
+      setTimeout(() => setUploadStatus(''), 5000);
+    }
+    setIsUploadingFile(false);
   };
 
   return (
@@ -154,7 +204,13 @@ export default function ChatPage() {
             </span>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+          {/* Phase 2: Navigation links */}
+          <button onClick={() => navigate(`/files/${projectId}`)} className="btn-ghost"
+            style={{ padding: '6px 12px', fontSize: '12px' }}>📁 Files</button>
+          <button onClick={() => navigate(`/timeline/${projectId}`)} className="btn-ghost"
+            style={{ padding: '6px 12px', fontSize: '12px' }}>📅 Timeline</button>
+          <div style={{ width: '1px', height: '24px', background: 'rgba(79, 209, 197, 0.08)' }} />
           <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'linear-gradient(135deg, var(--color-recall), var(--color-purple))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '12px', color: 'var(--color-ink)' }}>
             {user?.name?.charAt(0).toUpperCase() || '?'}
           </div>
@@ -269,6 +325,19 @@ export default function ChatPage() {
             )}
           </div>
 
+          {/* Upload status banner */}
+          {uploadStatus && (
+            <div style={{
+              margin: '0 24px 8px', padding: '10px 18px', borderRadius: '12px', fontSize: '13px',
+              background: uploadStatus.startsWith('❌') ? 'rgba(232, 97, 123, 0.06)' : 'rgba(79, 209, 197, 0.06)',
+              border: `1px solid ${uploadStatus.startsWith('❌') ? 'rgba(232, 97, 123, 0.15)' : 'rgba(79, 209, 197, 0.15)'}`,
+              color: uploadStatus.startsWith('❌') ? 'var(--color-conflict)' : 'var(--color-recall)',
+              animation: 'slide-up 0.2s ease-out',
+            }}>
+              {uploadStatus}
+            </div>
+          )}
+
           {/* Error */}
           {error && (
             <div style={{ margin: '0 24px 8px', padding: '12px 18px', borderRadius: '12px', fontSize: '13px', background: 'rgba(232, 97, 123, 0.06)', border: '1px solid rgba(232, 97, 123, 0.15)', color: 'var(--color-conflict)' }}>
@@ -278,7 +347,31 @@ export default function ChatPage() {
 
           {/* Input */}
           <form onSubmit={handleSend} style={{ padding: '12px 24px 24px', flexShrink: 0 }}>
-            <div style={{ maxWidth: '760px', margin: '0 auto', display: 'flex', gap: '12px', background: 'var(--color-surface)', border: '1px solid rgba(79, 209, 197, 0.08)', borderRadius: '18px', padding: '6px 6px 6px 18px', alignItems: 'center' }}>
+            <div style={{ maxWidth: '760px', margin: '0 auto', display: 'flex', gap: '8px', background: 'var(--color-surface)', border: '1px solid rgba(79, 209, 197, 0.08)', borderRadius: '18px', padding: '6px 6px 6px 14px', alignItems: 'center' }}>
+              {/* File upload button */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                style={{ display: 'none' }}
+                onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingFile}
+                title="Upload file to memory"
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px',
+                  padding: '4px 6px', borderRadius: '8px', opacity: isUploadingFile ? 0.4 : 0.6,
+                  transition: 'opacity 0.2s',
+                  flexShrink: 0,
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+                onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.6')}
+              >
+                {isUploadingFile ? '⏳' : '📎'}
+              </button>
+
               <input
                 id="chat-input"
                 type="text"
@@ -308,10 +401,10 @@ export default function ChatPage() {
           </form>
         </div>
 
-        {/* Right Sidebar — Memory Stats */}
+        {/* Right Sidebar — Memory Stats + Facts */}
         <aside
           style={{
-            width: '270px', borderLeft: '1px solid rgba(79, 209, 197, 0.06)',
+            width: '280px', borderLeft: '1px solid rgba(79, 209, 197, 0.06)',
             background: 'rgba(17, 24, 39, 0.5)', backdropFilter: 'blur(12px)',
             overflowY: 'auto', padding: '24px', flexShrink: 0,
           }}
@@ -326,6 +419,8 @@ export default function ChatPage() {
                 { label: 'Episodes', value: stats.episodic?.total_episodes ?? 0, icon: '📝' },
                 { label: 'Sessions', value: stats.episodic?.total_sessions ?? 0, icon: '🔗' },
                 { label: 'Vectors', value: stats.semantic?.points_count ?? 0, icon: '🧮' },
+                { label: 'Facts', value: stats.structured?.total_facts ?? 0, icon: '🧠' },
+                { label: 'Files', value: stats.files?.total_files ?? 0, icon: '📁' },
               ].map((s) => (
                 <div key={s.label} className="stat-card" style={{ marginBottom: '10px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -351,6 +446,49 @@ export default function ChatPage() {
           ) : (
             <div style={{ textAlign: 'center', padding: '20px 0' }}>
               <div className="loading-dots"><span /><span /><span /></div>
+            </div>
+          )}
+
+          {/* Phase 2: Structured Facts */}
+          {facts.length > 0 && (
+            <div style={{ marginTop: '28px' }}>
+              <div className="divider" style={{ marginBottom: '18px' }} />
+              <h3 style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-muted)', margin: '0 0 12px' }}>
+                🧠 Known Facts ({facts.length})
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {facts.slice(0, 10).map((fact) => (
+                  <div
+                    key={fact.id}
+                    style={{
+                      padding: '8px 12px', borderRadius: '8px',
+                      background: 'rgba(79, 209, 197, 0.03)',
+                      border: '1px solid rgba(79, 209, 197, 0.06)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '3px' }}>
+                      <span style={{ fontSize: '12px' }}>{FACT_TYPE_ICONS[fact.fact_type] || '📌'}</span>
+                      <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-recall)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        {fact.fact_type.replace('_', ' ')}
+                      </span>
+                      {fact.is_stale && (
+                        <div className="pulse pulse--stale" style={{ width: '5px', height: '5px', marginLeft: '4px' }} />
+                      )}
+                    </div>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: '16px' }}>
+                      {fact.key}
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', lineHeight: '16px', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const }}>
+                      {fact.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {facts.length > 10 && (
+                <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '8px', textAlign: 'center' }}>
+                  +{facts.length - 10} more facts
+                </div>
+              )}
             </div>
           )}
 
