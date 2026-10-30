@@ -1,7 +1,8 @@
 """
 MemoryOS Backend — Prompt Builder
-Assembles the system prompt + retrieved context + user message
-for the Gemini LLM call. Architecture.md §2.1.
+Phase 1: system prompt + retrieved context + user message
+Phase 2: + structured facts section
+Assembles the full prompt for the Gemini LLM call. Architecture.md §2.1.
 """
 
 from app.core.logging import get_logger
@@ -16,6 +17,7 @@ SYSTEM_PROMPT = """You are MemoryOS — an AI assistant with persistent, project
 
 ## Your Core Capabilities
 You have access to the full conversation history and semantic memory of this project.
+You also have access to structured facts — explicitly extracted knowledge about this project.
 When answering, you MUST draw on relevant past context to provide continuity.
 
 ## Rules You Must Follow
@@ -24,6 +26,7 @@ RULE-1: ALWAYS USE MEMORY
 - Before answering any question, check if relevant context exists in the retrieved
   memory chunks provided below. Use it to inform your response.
 - If memory is relevant, weave it naturally into your answer — don't just dump it.
+- Structured facts are high-confidence knowledge — use them with authority.
 
 RULE-2: CITE YOUR SOURCES
 - When referencing past conversations or facts from memory, briefly note the source
@@ -67,6 +70,7 @@ def build_prompt(
     recent_history: list[dict],
     project_name: str = "",
     project_context: str = "",
+    structured_facts: list[dict] | None = None,
 ) -> tuple[str, str]:
     """
     Build the full prompt for Gemini.
@@ -76,7 +80,7 @@ def build_prompt(
 
     Architecture:
         system_instruction = SYSTEM_PROMPT + project context
-        user_prompt = retrieved memory + recent history + new message
+        user_prompt = structured facts + retrieved memory + recent history + new message
     """
     # Build system instruction with project context
     system_instruction = SYSTEM_PROMPT
@@ -88,6 +92,20 @@ def build_prompt(
     # Build the user prompt
     parts = []
 
+    # Section 0 (Phase 2): Structured facts — high-confidence project knowledge
+    if structured_facts:
+        parts.append("## Structured Project Facts")
+        parts.append(
+            "The following are known facts about this project (high confidence):\n"
+        )
+        for fact in structured_facts[:20]:  # Cap at 20 facts to save tokens
+            fact_type = fact.get("fact_type", "")
+            key = fact.get("key", "")
+            value = fact.get("value", "")
+            confidence = fact.get("confidence", 0)
+            parts.append(f"- **[{fact_type}]** {key}: {value} (confidence: {confidence:.1%})")
+        parts.append("\n---\n")
+
     # Section 1: Retrieved memory context
     if retrieved_chunks:
         parts.append("## Retrieved Memory Context")
@@ -98,8 +116,13 @@ def build_prompt(
             source = chunk.get("source_type", "conversation")
             score = chunk.get("combined_score", chunk.get("score", 0))
             content = chunk.get("content", "")
+            # Add filename for file chunks
+            filename = chunk.get("filename", "")
+            source_label = f"{source}"
+            if filename:
+                source_label += f" — {filename}"
             parts.append(
-                f"**Memory {i}** (source: {source}, relevance: {score:.2f}):\n{content}\n"
+                f"**Memory {i}** (source: {source_label}, relevance: {score:.2f}):\n{content}\n"
             )
         parts.append("---\n")
 
@@ -124,6 +147,7 @@ def build_prompt(
     logger.info(
         "prompt_built",
         retrieved_chunks=len(retrieved_chunks),
+        structured_facts=len(structured_facts) if structured_facts else 0,
         history_turns=len(recent_history),
         prompt_length=len(user_prompt),
     )

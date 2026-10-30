@@ -3,6 +3,11 @@ MemoryOS Backend — Chat API Routes
 /chat/{project_id} — the core loop (Architecture.md §2.1).
 Supports both SSE streaming and non-streaming responses.
 
+Phase 2 upgrades:
+- Hybrid retrieval (semantic + BM25 via RRF fusion)
+- Structured facts included in prompt
+- Fact extraction after each turn (non-blocking)
+
 Key design: DB sessions are opened/closed in short bursts around each
 DB operation, NOT held open across slow Gemini API calls. Supabase
 free-tier drops idle connections after ~10s, so we never hold a
@@ -72,6 +77,69 @@ async def _get_recent_history(
     async with factory() as db:
         episodes = await get_recent_episodes(db, project_id, limit=limit, session_id=session_id)
         return [{"role": ep.role, "content": ep.content} for ep in episodes]
+
+
+async def _get_structured_facts(project_id: uuid.UUID) -> list[dict]:
+    """Fetch structured facts for the project (Phase 2). Short DB session."""
+    factory = get_session_factory()
+    async with factory() as db:
+        from app.memory.structured import get_all_facts_text
+        return await get_all_facts_text(db, project_id, limit=30)
+
+
+async def _retrieve_hybrid(
+    project_id: uuid.UUID,
+    query_embedding: list[float],
+    query_text: str,
+) -> list[dict]:
+    """
+    Phase 2 hybrid retrieval: semantic + BM25 with RRF fusion.
+    Uses its own short DB session for BM25 (which queries episodes + facts).
+    """
+    factory = get_session_factory()
+    async with factory() as db:
+        return await retrieve_context(
+            project_id=project_id,
+            query_vector=query_embedding,
+            query_text=query_text,
+            db=db,
+        )
+
+
+async def _extract_and_store_facts(
+    project_id: uuid.UUID,
+    user_message: str,
+    response_text: str,
+) -> None:
+    """
+    Phase 2: Extract structured facts from the conversation turn.
+    Runs after the response is sent — non-blocking.
+    """
+    try:
+        from app.llm.fact_extractor import extract_facts
+        from app.memory.structured import store_fact
+
+        facts = await extract_facts(user_message, response_text)
+
+        if facts:
+            factory = get_session_factory()
+            async with factory() as db:
+                for fact_data in facts:
+                    await store_fact(
+                        db=db,
+                        project_id=project_id,
+                        fact_type=fact_data["fact_type"],
+                        key=fact_data["key"],
+                        value=fact_data["value"],
+                        source="conversation",
+                        confidence=fact_data["confidence"],
+                    )
+                await db.commit()
+
+            logger.info("facts_extracted_from_chat", project_id=str(project_id), count=len(facts))
+    except Exception as e:
+        # Non-blocking — fact extraction failures shouldn't break chat
+        logger.warning("fact_extraction_failed", error=str(e)[:200])
 
 
 async def _store_episodes_and_embed(
@@ -157,13 +225,14 @@ async def chat(
     Send a message to the project's AI assistant.
     Non-streaming endpoint — returns the full response.
 
-    Flow (Architecture.md §2.1):
+    Phase 2 Flow (Architecture.md §2.1):
     1. Validate project access (short DB session)
     2. Embed the query (Gemini API — no DB held)
-    3. Retrieve relevant memory (Qdrant — no DB held)
-    4. Get recent history (short DB session)
+    3. Hybrid retrieve: semantic + BM25 with RRF (short DB session for BM25)
+    4. Get recent history + structured facts (short DB sessions)
     5. Build prompt + generate LLM response (Gemini API — no DB held)
     6. Store both turns + embed for future retrieval (short DB session)
+    7. Extract facts from this turn (non-blocking, short DB session)
     """
     # Step 1: Validate project access (short DB session, then released)
     project = await _validate_project_access(project_id, user_id)
@@ -173,16 +242,18 @@ async def chat(
     # Step 2: Embed the query (Gemini API — no DB connection needed)
     query_embedding = await generate_query_embedding(payload.message)
 
-    # Step 3: Retrieve relevant memory from Qdrant (no DB needed)
+    # Step 3: Hybrid retrieval (semantic + BM25 with RRF fusion)
     retrieved_chunks = []
     if query_embedding:
-        retrieved_chunks = await retrieve_context(
+        retrieved_chunks = await _retrieve_hybrid(
             project_id=project_id,
-            query_vector=query_embedding,
+            query_embedding=query_embedding,
+            query_text=payload.message,
         )
 
-    # Step 4: Get recent conversation history (short DB session)
+    # Step 4: Get recent history + structured facts (short DB sessions)
     recent_history = await _get_recent_history(project_id, session_id)
+    structured_facts = await _get_structured_facts(project_id)
 
     # Step 5: Build prompt and generate response (Gemini API — no DB held)
     project_context = ""
@@ -195,6 +266,7 @@ async def chat(
         recent_history=recent_history,
         project_name=project.name,
         project_context=project_context,
+        structured_facts=structured_facts,
     )
 
     try:
@@ -232,11 +304,18 @@ async def chat(
         # Memory storage failure shouldn't block the response
         logger.error("chat_storage_error", error=str(e)[:200])
 
+    # Step 7 (Phase 2): Extract facts from this turn (non-blocking)
+    try:
+        await _extract_and_store_facts(project_id, payload.message, response_text)
+    except Exception as e:
+        logger.warning("chat_fact_extraction_error", error=str(e)[:200])
+
     logger.info(
         "chat_complete",
         project_id=str(project_id),
         session_id=str(session_id),
         sources_used=len(retrieved_chunks),
+        facts_in_context=len(structured_facts),
     )
 
     return ChatResponse(
@@ -258,24 +337,26 @@ async def chat_stream(
     """
     SSE streaming chat endpoint.
     Streams the AI response token-by-token via Server-Sent Events.
-    After streaming completes, stores both turns in memory.
+    After streaming completes, stores both turns in memory + extracts facts.
     """
     # Validate project (short DB session)
     project = await _validate_project_access(project_id, user_id)
 
     session_id = payload.session_id or uuid.uuid4()
 
-    # Retrieve context (no DB held during Gemini/Qdrant calls)
+    # Hybrid retrieval (no DB held during Gemini calls, short session for BM25)
     query_embedding = await generate_query_embedding(payload.message)
     retrieved_chunks = []
     if query_embedding:
-        retrieved_chunks = await retrieve_context(
+        retrieved_chunks = await _retrieve_hybrid(
             project_id=project_id,
-            query_vector=query_embedding,
+            query_embedding=query_embedding,
+            query_text=payload.message,
         )
 
-    # Get recent history (short DB session)
+    # Get recent history + structured facts (short DB sessions)
     recent_history = await _get_recent_history(project_id, session_id)
+    structured_facts = await _get_structured_facts(project_id)
 
     project_context = ""
     if project.tech_stack:
@@ -287,6 +368,7 @@ async def chat_stream(
         recent_history=recent_history,
         project_name=project.name,
         project_context=project_context,
+        structured_facts=structured_facts,
     )
 
     # Store user message (short DB session)
@@ -378,6 +460,12 @@ async def chat_stream(
                     )
 
                 await post_db.commit()
+
+            # Phase 2: Extract facts (non-blocking)
+            try:
+                await _extract_and_store_facts(project_id, payload.message, complete_response)
+            except Exception:
+                pass  # Non-blocking
 
             # Send completion event
             yield {
