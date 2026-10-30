@@ -30,7 +30,7 @@ Instead of starting every conversation from scratch, the assistant retrieves rel
 
 ## ✨ Features
 
-### Currently Live (Phase 1)
+### Phase 1 — Foundation ✅
 - 🧠 **Episodic Memory** — Every conversation stored chronologically
 - 🔍 **Semantic Search** — Vector-based retrieval finds relevant context by meaning
 - 🔗 **Cross-Session Recall** — AI remembers across sessions, no re-explaining needed
@@ -39,23 +39,32 @@ Instead of starting every conversation from scratch, the assistant retrieves rel
 - 🎨 **Premium UI** — Glassmorphism, animated gradients, micro-animations
 - ✏️ **Project Management** — Create, rename, delete projects with confirmation modals
 - 📝 **Markdown Rendering** — Code blocks, headings, math notation (KaTeX) in AI responses
-- 💭 **Thinking Indicator** — Animated cycling status messages while AI generates (like GPT/Claude)
+- 💭 **Thinking Indicator** — Animated cycling status messages while AI generates
 - 👤 **User Management** — Update profile, change password, delete account
 - 🔐 **JWT Auth** — Secure registration, login, and session management
 - 🔒 **Project Isolation** — Each project has its own memory namespace
+
+### Phase 2 — Multi-Modal Ingestion ✅
+- 📁 **File Upload & Versioning** — Upload text/code files, auto-chunked and embedded into memory with version tracking
+- 🧠 **Structured Facts** — AI automatically extracts decisions, preferences, tech stack, goals from conversations
+- 🔍 **Hybrid Search** — BM25 keyword + semantic search fused via Reciprocal Rank Fusion (RRF)
+- 📅 **Memory Timeline** — Chronological view of all memory events (conversations, files, facts) with filter chips
+- 📎 **Chat File Upload** — Upload files directly from the chat input bar
+- 🧩 **Facts Sidebar** — Extracted project knowledge displayed alongside chat
+- 📄 **File Management Page** — Drag-and-drop upload, file list, version history, delete
 
 ---
 
 ## 🧠 Memory Architecture
 
-### 🕒 Episodic Memory
+### 🕒 Episodic Memory (Tier 1)
 Stores events and conversations chronologically — **what happened and when**.
 
-### 🔍 Semantic Memory
+### 🔍 Semantic Memory (Tier 2)
 Vector-based retrieval finds relevant context by meaning — **relevant knowledge even when wording differs**.
 
-### 📊 Structured Memory *(Planned — Phase 2)*
-Explicit facts, entities, and relationships in structured form.
+### 📊 Structured Memory (Tier 3) ✅
+Explicit facts, entities, and relationships extracted by AI — **decisions, preferences, tech stack, goals, milestones**.
 
 ### 🩹 Self-Healing Memory *(Planned — Phase 3)*
 Auto-detect and repair stale, contradictory, or duplicated knowledge.
@@ -65,25 +74,30 @@ Auto-detect and repair stale, contradictory, or duplicated knowledge.
 ## 🔄 How It Works
 
 ```text
-User Message
+User Message / File Upload
     │
     ▼
 Embed Query (Gemini Embeddings)
     │
     ▼
-Retrieve Context (Qdrant Semantic Search)
+Hybrid Retrieval
     │
-    ├── Episodic Memory (recent history)
-    └── Semantic Memory (relevant past context)
+    ├── Semantic Search (Qdrant vectors)
+    ├── BM25 Keyword Search (rank-bm25)
+    └── RRF Fusion (k=60) + Re-ranking
            │
            ▼
-    Build Prompt (system + context + query)
+    Build Prompt
+    │
+    ├── Structured Facts (high-confidence project knowledge)
+    ├── Retrieved Memory Chunks (hybrid search results)
+    └── Recent Conversation History
            │
            ▼
     Gemini LLM → Context-Aware Response
            │
            ▼
-    Store Both Turns (DB + Qdrant)
+    Store (DB + Qdrant + Extract Facts)
 ```
 
 ---
@@ -110,17 +124,18 @@ Retrieve Context (Qdrant Semantic Search)
    ┌──────────────┐      ┌──────────────┐      ┌──────────────┐
    │   Supabase   │      │    Qdrant    │      │    Gemini    │
    │  PostgreSQL  │      │ Vector Store │      │  LLM + Embed │
+   │  + Storage   │      │              │      │              │
    └──────────────┘      └──────────────┘      └──────────────┘
 ```
 
 **Tech Stack:**
 | Layer | Technology |
 |---|---|
-| Frontend | React 18, TypeScript, Vite, Zustand, ReactMarkdown |
-| Backend | Python 3.12, FastAPI, SQLAlchemy, Alembic |
-| Database | Supabase PostgreSQL (connection pooler) |
+| Frontend | React 18, TypeScript, Vite, Zustand, ReactMarkdown, KaTeX |
+| Backend | Python 3.12, FastAPI, SQLAlchemy, Alembic, rank-bm25 |
+| Database | Supabase PostgreSQL (connection pooler) + Supabase Storage |
 | Vectors | Qdrant Cloud (3072-dim embeddings) |
-| AI | Gemini 3 Flash Preview (LLM), Gemini Embedding 001 |
+| AI | Gemini 3 Flash Preview (LLM), Gemini Embedding 001, Gemini Fact Extraction |
 | Auth | JWT (PyJWT + bcrypt) |
 | Deploy | Railway (backend), Vercel (frontend) |
 
@@ -128,13 +143,13 @@ Retrieve Context (Qdrant Semantic Search)
 
 ## 🚧 Project Status
 
-**Current Phase: Phase 1 — Foundation ✅ DEPLOYED & LIVE**
+**Current Phase: Phase 2 — Multi-Modal Ingestion ✅ COMPLETE**
 
 ### Phase 1 — Foundation ✅
 Core AI assistant, authentication, project isolation, episodic + semantic memory, premium web application. **Deployed and live.**
 
-### Phase 2 — Multi-Modal Ingestion 🔜
-File upload, structured memory extraction, hybrid search (BM25 + semantic), memory timeline UI.
+### Phase 2 — Multi-Modal Ingestion ✅
+File upload & versioning, structured memory (fact extraction), hybrid search (BM25 + semantic + RRF), memory timeline UI, chat integration. **Complete — ready to deploy.**
 
 ### Phase 3 — Self-Healing Memory 🔜
 Conflict detection, contradiction resolution, memory staleness scoring, consolidation, knowledge-gap detection.
@@ -147,6 +162,41 @@ GitHub/Jira/Notion integrations, IDE extensions, shared team memory, real-time c
 
 ---
 
+## 📂 Project Structure
+
+```text
+memoryos/
+├── backend/
+│   ├── app/
+│   │   ├── api/          # Route handlers
+│   │   │   ├── auth.py       # Registration, login, profile
+│   │   │   ├── chat.py       # Chat with hybrid retrieval + fact extraction
+│   │   │   ├── files.py      # File upload, download, versioning (Phase 2)
+│   │   │   ├── health.py     # Health check + diagnostics
+│   │   │   ├── memory.py     # Episodes, facts, timeline, stats
+│   │   │   └── projects.py   # Project CRUD
+│   │   ├── core/         # Config, security, logging
+│   │   ├── db/           # SQLAlchemy models + session
+│   │   ├── llm/          # Gemini client, embeddings, prompt builder, fact extractor
+│   │   ├── memory/       # Memory subsystems
+│   │   │   ├── episodic.py       # Tier 1: conversation storage
+│   │   │   ├── semantic.py       # Tier 2: Qdrant vector store
+│   │   │   ├── structured.py     # Tier 3: facts CRUD (Phase 2)
+│   │   │   ├── bm25_search.py    # BM25 keyword search (Phase 2)
+│   │   │   ├── retrieval.py      # Hybrid retrieval + RRF fusion
+│   │   │   └── file_processor.py # File parsing, chunking, embedding (Phase 2)
+│   │   └── schemas/      # Pydantic request/response models
+│   ├── alembic/          # Database migrations
+│   └── requirements.txt
+├── frontend/
+│   └── src/
+│       ├── api/          # Axios client + API methods
+│       ├── pages/        # React pages (Login, Register, Projects, Chat, Files, Timeline)
+│       └── store/        # Zustand state management
+```
+
+---
+
 ## ⚙️ Getting Started
 
 ### Prerequisites
@@ -155,7 +205,7 @@ GitHub/Jira/Notion integrations, IDE extensions, shared team memory, real-time c
 - Node.js 18+ & npm
 - Git
 - Google Gemini API key
-- Supabase project (PostgreSQL)
+- Supabase project (PostgreSQL + Storage)
 - Qdrant Cloud cluster
 
 ### Local Setup
@@ -182,11 +232,10 @@ source venv/bin/activate
 ```bash
 # Install dependencies
 pip install -r requirements.txt
-```
 
-Create a `.env` file from `.env.example` and add your credentials.
+# Run database migrations
+alembic upgrade head
 
-```bash
 # Start the backend
 python -m app.main
 ```
@@ -198,6 +247,8 @@ npm install
 npm run dev
 ```
 
+Create a `.env` file from `.env.example` and add your credentials.
+
 > **⚠️ Never commit `.env` or expose API keys, database credentials, service keys, or JWT secrets.**
 
 ### Deployment
@@ -206,7 +257,7 @@ npm run dev
 |---|---|
 | Frontend | Vercel (auto-deploy from GitHub) |
 | Backend | Railway (auto-deploy from GitHub) |
-| Database | Supabase PostgreSQL (connection pooler) |
+| Database | Supabase PostgreSQL (connection pooler) + Supabase Storage |
 | Vectors | Qdrant Cloud |
 | AI | Gemini API |
 

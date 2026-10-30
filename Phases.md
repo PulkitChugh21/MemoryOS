@@ -7,17 +7,17 @@ ahead of the current phase.*
 
 ---
 
-## Phase 1 — Foundation (Weeks 1–6)
+## Phase 1 — Foundation (Weeks 1–6) ✅ COMPLETE
 
 **Goal:** A live, deployed, working AI assistant with basic memory and multi-user auth.
 
-- FastAPI backend with full async SQLAlchemy + Supabase PostgreSQL
-- Supabase Auth integration — registration, login, JWT verification
-- Episodic memory: store and retrieve conversation history per project
-- Gemini API integration — LLM responses + text-embedding-004
-- Qdrant vector store — embed and search conversation chunks
-- Basic React web app — auth flow, project list, chat interface
-- Railway + Vercel deployment — live public URL
+- ✅ FastAPI backend with full async SQLAlchemy + Supabase PostgreSQL
+- ✅ JWT Auth — registration, login, profile management
+- ✅ Episodic memory: store and retrieve conversation history per project
+- ✅ Gemini API integration — LLM responses + gemini-embedding-001 (3072-dim)
+- ✅ Qdrant vector store — embed and search conversation chunks
+- ✅ Premium React web app — auth flow, project management, chat interface
+- ✅ Railway + Vercel deployment — live public URL
 
 **Ships:** `users`, `projects`, `memory_episodes` tables · auth + project +
 basic chat endpoints · the Master System Prompt with RULE-1, 2, 4, 5, 7, 8
@@ -26,20 +26,22 @@ versioning is stubbed, fully built in Phase 2).
 
 ---
 
-## Phase 2 — Multi-Modal Ingestion (Weeks 7–12)
+## Phase 2 — Multi-Modal Ingestion (Weeks 7–12) ✅ COMPLETE
 
 **Goal:** Users can share files, code, and data — all remembered and versioned.
 
-- File upload + versioning (Supabase Storage, diff on re-upload)
-- Structured memory store — fact extraction from conversations via Gemini
-- Hybrid search — BM25 keyword + semantic combined with RRF fusion
-- VS Code extension skeleton — captures edits, surfaces memory in sidebar
-- CLI tool — `memoryos ask` / `push` / `status` commands
-- Memory timeline UI — scrollable project history view
+- ✅ File upload + versioning (Supabase Storage, diff on re-upload)
+- ✅ Structured memory store — fact extraction from conversations via Gemini
+- ✅ Hybrid search — BM25 keyword + semantic combined with RRF fusion (k=60)
+- ✅ Memory timeline UI — scrollable project history view with filter chips
+- ✅ File management page — drag-and-drop upload, version badges, delete
+- ✅ Chat integration — file upload from chat, facts sidebar, hybrid retrieval
+- 🔜 VS Code extension skeleton — deferred to Phase 2.5
+- 🔜 CLI tool — `memoryos ask` / `push` / `status` — deferred to Phase 2.5
 
-**Ships:** `memory_facts` table · file + memory/search endpoints · RULE-6
+**Ships:** `memory_facts` + `project_files` tables · file + memory/search endpoints · RULE-6
 (file versioning) fully implemented · retrieval upgraded from
-semantic-only to hybrid (semantic + BM25) with recency re-ranking.
+semantic-only to hybrid (semantic + BM25) with RRF fusion + recency re-ranking.
 
 ---
 

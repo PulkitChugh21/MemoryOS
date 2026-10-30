@@ -1,32 +1,54 @@
-# React + TypeScript + Vite
+# MemoryOS — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Premium React web application for MemoryOS — the AI workspace with persistent memory.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **React 18** with TypeScript
+- **Vite** — blazing-fast build tool
+- **Zustand** — lightweight state management
+- **ReactMarkdown** + remark-gfm + remark-math + rehype-katex — rich AI response rendering
+- **Axios** — HTTP client with JWT interceptors
 
-## React Compiler
+## Pages
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+| Page | Route | Description |
+|---|---|---|
+| Login | `/login` | Split-screen auth with glassmorphism form |
+| Register | `/register` | Registration with feature highlights |
+| Projects | `/projects` | Project grid with create/rename/delete, user settings |
+| Chat | `/chat/:projectId` | AI chat with memory sidebar, file upload, facts panel |
+| Files | `/files/:projectId` | Drag-and-drop file upload, version history, delete (Phase 2) |
+| Timeline | `/timeline/:projectId` | Chronological memory events with filter chips (Phase 2) |
 
-## Expanding the Oxlint configuration
+## Design System — "Synaptic Recall"
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+- **Theme:** Dark glassmorphism with teal (`#4FD1C5`) accent
+- **Backgrounds:** Animated gradient with floating orbs + grid overlay
+- **Cards:** Glass effect with hover glow + top-line accent
+- **Typography:** Space Grotesk (display), Inter (body), JetBrains Mono (code)
+- **Signature Element:** "Pulse" — animated teal dot indicating memory activity
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+## Getting Started
+
+```bash
+npm install
+npm run dev      # Start dev server
+npm run build    # Production build
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Environment
+
+The frontend connects to the backend API. Set the `VITE_API_URL` environment variable:
+
+```bash
+# .env.local (for local development)
+VITE_API_URL=http://localhost:8000
+
+# Production (set in Vercel dashboard)
+VITE_API_URL=https://memoryos-production-cf09.up.railway.app
+```
+
+## Deployment
+
+Deployed on **Vercel** with auto-deploy from GitHub. SPA rewrite configured in `vercel.json`.

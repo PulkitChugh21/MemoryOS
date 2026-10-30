@@ -5,11 +5,11 @@ meaningful unit of work: what got finished, what's in progress right now,
 and what's next. Keep it honest — this is exactly the discipline MemoryOS
 itself is meant to enforce for its users, so it should not go stale.*
 
-**Last updated:** 2026-09-09
+**Last updated:** 2026-10-30
 
 ---
 
-## Current Status: ✅ Phase 1 — Foundation: Deployed & Live
+## Current Status: ✅ Phase 2 — Multi-Modal Ingestion: Complete
 
 **Frontend:** https://memory-os-gamma.vercel.app
 **Backend:** https://memoryos-production-cf09.up.railway.app
@@ -98,20 +98,56 @@ itself is meant to enforce for its users, so it should not go stale.*
   - [x] Project CRUD (create, rename, delete) working
   - [x] User management (update profile, change password, delete account) working
   - [x] Git security audit: .gitignore hardened for .env.*, binary files, build artifacts
+- [x] **Phase 2 Backend — Fully Built:**
+  - [x] `db/models.py` — added `MemoryFact` and `ProjectFile` SQLAlchemy models
+  - [x] Alembic migration `b3e7f2a1c504` — `memory_facts` + `project_files` tables with indexes
+  - [x] `schemas/__init__.py` — added Pydantic schemas for facts, files, and timeline
+  - [x] `memory/structured.py` — facts CRUD: store, query by type/key, search, update, mark stale, count
+  - [x] `llm/fact_extractor.py` — Gemini-based fact extraction from conversations (decision, preference, entity, tech_stack, goal, milestone, open_question)
+  - [x] `memory/bm25_search.py` — BM25 keyword search using rank-bm25 (pure Python, no external service)
+  - [x] `memory/retrieval.py` — upgraded to hybrid search: semantic (Qdrant) + BM25 fused via RRF (k=60), re-ranked by rrf_score * 0.5 + recency * 0.3 + source_type_boost * 0.2
+  - [x] `core/config.py` — added file upload config: 10MB max, allowed extensions, chunk size (500 tokens), overlap (100 tokens)
+  - [x] `memory/file_processor.py` — file ingestion pipeline: parse → chunk → embed → store in Supabase Storage + Qdrant, with version tracking and diff summary
+  - [x] `api/files.py` — file upload, download, list, delete, version history endpoints
+  - [x] `main.py` — registered files router
+  - [x] `api/chat.py` — integrated hybrid search, structured facts in context, non-blocking fact extraction after each response
+  - [x] `llm/prompt_builder.py` — added structured facts section to prompt (high-confidence project knowledge)
+  - [x] `api/memory.py` — added facts listing, fact detail, timeline, and updated stats with fact/file counts
+  - [x] `requirements.txt` — added rank-bm25==0.2.2 and supabase==2.15.2
+- [x] **Phase 2 Frontend — Fully Built:**
+  - [x] `api/client.ts` — added `filesApi` (upload, list, get, download, delete, versions, diff) and `factsApi` (list, get) + timeline endpoint
+  - [x] `pages/FilesPage.tsx` — drag-and-drop file upload, file list with version badges, delete with confirmation
+  - [x] `pages/TimelinePage.tsx` — chronological memory timeline with filter chips (All/Conversations/Files/Facts)
+  - [x] `pages/ChatPage.tsx` — added 📎 file upload button in input bar, facts sidebar showing extracted knowledge, navigation links to Files/Timeline pages, updated memory stats with facts/files counts
+  - [x] `App.tsx` — added routes: `/files/:projectId`, `/timeline/:projectId`
+  - [x] `index.css` — added Phase 2 CSS: upload zone, timeline nodes, filter chips, fact cards, file version badges, responsive adjustments
+- [x] **Phase 2 Verification:**
+  - [x] TypeScript compilation (`tsc --noEmit`) — zero errors
+  - [x] Frontend build (`npm run build`) — passes
+  - [x] `.gitignore` audit — all secrets protected, no sensitive files tracked
 
 ## 🔨 Currently Being Worked On
 
-- Nothing — Phase 1 is complete and live ✅
+- Nothing — Phase 2 code is complete. Ready for deployment.
 
 ## ⏭️ Next Up
 
-1. Begin Phase 2 planning and implementation (Multi-Modal Ingestion):
-   - File upload and ingestion pipeline
-   - Structured memory extraction (entities, facts, relationships)
-   - Hybrid search (BM25 + semantic retrieval)
-   - Memory timeline UI
-   - File versioning and diffing
-2. Later phases: Self-Healing Memory (Phase 3), Enterprise Scale (Phase 4), Ecosystem (Phase 5)
+1. **Deploy Phase 2:**
+   - Run Alembic migration `alembic upgrade head` on Supabase (adds `memory_facts` + `project_files` tables)
+   - Install new backend dependencies: `pip install rank-bm25 supabase`
+   - Redeploy backend to Railway
+   - Redeploy frontend to Vercel
+   - Manual verification: test file upload, fact extraction, hybrid search, timeline
+2. **Phase 2 deferred items:**
+   - VS Code extension skeleton (deferred to Phase 2.5)
+   - CLI tool (`memoryos ask` / `push` / `status`) (deferred to Phase 2.5)
+3. Begin Phase 3 planning and implementation (Self-Healing Memory):
+   - Celery worker infrastructure
+   - Conflict detection and resolution
+   - Staleness TTL scoring
+   - Memory consolidation
+   - Gap detection
+   - Memory health dashboard
 
 ## 🧭 Decisions Log (append-only — don't edit past entries, add new ones)
 
@@ -141,6 +177,13 @@ itself is meant to enforce for its users, so it should not go stale.*
 | 2026-09-03 | Chat retry logic: 2 retries with exponential backoff, 60s frontend + backend timeout |
 | 2026-09-03 | Updated system prompt for concise responses: 200-400 word max, no LaTeX $..$ syntax |
 | 2026-09-09 | Added animated thinking indicator with 8 cycling status phrases while AI generates |
+| 2026-10-30 | Phase 2: Files limited to 10MB max, text/code files only (images/PDFs deferred) |
+| 2026-10-30 | Phase 2: VS Code extension and CLI deferred to end of Phase 2 / Phase 2.5 |
+| 2026-10-30 | Phase 2: rank-bm25 chosen for BM25 keyword search (pure Python, $0/month, no Elasticsearch) |
+| 2026-10-30 | Phase 2: RRF fusion with k=60 merges semantic + BM25 ranked lists (standard from RRF paper) |
+| 2026-10-30 | Phase 2: BM25 indexes built in-memory at query time (project memory is small enough; caching added later if needed) |
+| 2026-10-30 | Phase 2: Fact extraction runs non-blocking after response is sent (same pattern as embedding storage) |
+| 2026-10-30 | Phase 2: Short-lived DB sessions strictly enforced around each operation to avoid Supabase connection drops during slow Gemini calls |
 
 ## 📝 How to Update This File
 
