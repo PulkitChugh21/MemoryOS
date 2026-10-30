@@ -70,6 +70,22 @@ class Settings(BaseSettings):
     retrieval_top_k: int = 8
     context_token_budget: int = 6000
 
+    # --- Phase 2: File Upload Config ---
+    max_file_size_bytes: int = 10 * 1024 * 1024  # 10MB
+    supabase_storage_bucket: str = "project-files"
+    file_chunk_size_tokens: int = 500
+    file_chunk_overlap_tokens: int = 100
+    allowed_file_extensions: str = (
+        ".txt,.md,.py,.js,.ts,.jsx,.tsx,.json,.csv,.yaml,.yml,.toml,"
+        ".html,.css,.sql,.sh,.go,.java,.rs,.c,.cpp,.h,.xml,.env.example,"
+        ".gitignore,.dockerfile,.makefile,.cfg,.ini,.log,.r,.rb,.php,.swift,.kt"
+    )
+
+    @property
+    def allowed_extensions_list(self) -> list[str]:
+        """Parse allowed file extensions into a list."""
+        return [ext.strip() for ext in self.allowed_file_extensions.split(",") if ext.strip()]
+
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",

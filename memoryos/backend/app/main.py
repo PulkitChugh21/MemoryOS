@@ -25,7 +25,7 @@ async def lifespan(app: FastAPI):
         "memoryos_starting",
         env=settings.app_env,
         debug=settings.app_debug,
-        phase=1,
+        phase=2,
     )
     yield
     await dispose_engine()
@@ -39,7 +39,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="MemoryOS API",
         description="Persistent AI workspace with self-healing memory",
-        version="0.1.0",
+        version="0.2.0",
         lifespan=lifespan,
         docs_url="/docs" if settings.app_debug else None,
         redoc_url="/redoc" if settings.app_debug else None,
@@ -93,12 +93,14 @@ def create_app() -> FastAPI:
     from app.api.chat import router as chat_router
     from app.api.memory import router as memory_router
     from app.api.health import router as health_router
+    from app.api.files import router as files_router
 
     app.include_router(auth_router, prefix="/api/v1")
     app.include_router(projects_router, prefix="/api/v1")
     app.include_router(chat_router, prefix="/api/v1")
     app.include_router(memory_router, prefix="/api/v1")
     app.include_router(health_router, prefix="/api/v1")
+    app.include_router(files_router, prefix="/api/v1")
 
     return app
 
