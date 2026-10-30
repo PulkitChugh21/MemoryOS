@@ -1,6 +1,6 @@
 """
 MemoryOS Backend — Pydantic Schemas
-Request/response models for all Phase 1 API endpoints.
+Request/response models for Phase 1 + Phase 2 API endpoints.
 Standard error shape enforced per Rules.md §3.
 """
 
@@ -158,11 +158,103 @@ class SessionListResponse(BaseModel):
 
 
 # ===========================
+# Fact Schemas (Phase 2)
+# ===========================
+
+class FactResponse(BaseModel):
+    """A single structured fact from memory."""
+    id: UUID
+    project_id: UUID
+    fact_type: str
+    key: str
+    value: str
+    source: str
+    confidence: float
+    is_stale: bool
+    ttl_days: Optional[int] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class FactListResponse(BaseModel):
+    facts: list[FactResponse]
+    total: int
+
+
+# ===========================
+# File Schemas (Phase 2)
+# ===========================
+
+class FileResponse(BaseModel):
+    """Metadata for an uploaded file."""
+    id: UUID
+    project_id: UUID
+    filename: str
+    mime_type: str
+    size_bytes: int
+    version: int
+    chunk_count: int
+    is_current: bool
+    diff_summary: Optional[str] = None
+    uploaded_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class FileListResponse(BaseModel):
+    files: list[FileResponse]
+    total: int
+
+
+class FileVersionResponse(BaseModel):
+    """Version history entry for a file."""
+    id: UUID
+    version: int
+    size_bytes: int
+    chunk_count: int
+    diff_summary: Optional[str] = None
+    uploaded_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class FileUploadResponse(BaseModel):
+    """Response after file upload."""
+    file: FileResponse
+    facts_extracted: int = 0
+    chunks_embedded: int = 0
+    is_new_version: bool = False
+    diff_summary: Optional[str] = None
+
+
+# ===========================
+# Timeline Schemas (Phase 2)
+# ===========================
+
+class TimelineEvent(BaseModel):
+    """A single event in the project memory timeline."""
+    event_type: str  # "conversation" | "file_upload" | "file_update" | "fact_extracted"
+    event_id: UUID
+    title: str
+    description: str = ""
+    timestamp: datetime
+    metadata: dict[str, Any] = {}
+
+
+class TimelineResponse(BaseModel):
+    events: list[TimelineEvent]
+    total: int
+
+
+# ===========================
 # Health Schemas
 # ===========================
 
 class HealthResponse(BaseModel):
     status: str = "ok"
-    version: str = "0.1.0"
-    phase: int = 1
+    version: str = "0.2.0"
+    phase: int = 2
     services: dict[str, str] = {}  # service_name → "connected" | "error"
+
